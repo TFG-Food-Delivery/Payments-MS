@@ -26,7 +26,7 @@ export class PaymentsService {
    * @returns The created Stripe session.
    */
   async createPaymentSession(paymentSessionDto: PaymentSessionDto) {
-    const { items, orderId } = paymentSessionDto;
+    const { items, orderId, useLoyaltyPoints, deliveryFee } = paymentSessionDto;
     try {
       const lineItems = items.map((item) => {
         return {
@@ -40,6 +40,20 @@ export class PaymentsService {
           quantity: item.quantity,
         };
       });
+
+      const fee = Math.round(deliveryFee * 100);
+      if (!useLoyaltyPoints) {
+        lineItems.push({
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: 'Delivery Fee',
+            },
+            unit_amount: fee,
+          },
+          quantity: 1,
+        });
+      }
 
       const session = await this.stripe.checkout.sessions.create({
         payment_intent_data: {
